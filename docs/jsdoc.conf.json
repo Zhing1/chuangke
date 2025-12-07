@@ -1,0 +1,19 @@
+{
+  "source": {
+    "include": [
+      "public/js",
+      "OKComputer_姿态捕捉节奏健身(第二版)"
+    ],
+    "includePattern": ".+\\.js$",
+    "excludePattern": "(^|\\/)node_modules(\\/|$)|camera-stabilizer\\.js$"
+  },
+  "opts": {
+    "destination": "docs/api",
+    "recurse": true
+  },
+  "templates": {
+    "default": {
+      "includeDate": false
+    }
+  }
+}

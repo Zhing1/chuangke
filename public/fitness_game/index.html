@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FitRhythm - AI摄像头健身游戏</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
+    
+    <!-- MediaPipe -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1640029074/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3.1620248257/drawing_utils.js"></script>
+    
+    <!-- 摄像头稳定器 -->
+    <script src="camera-stabilizer.js"></script>
+    
+    <!-- 摄像头调试模块 -->
+    <script src="camera-debug.js"></script>
+    
+    <!-- 强制连接模块 -->
+    <script src="camera-force-connect.js"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Noto Sans SC', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            overflow-x: hidden;
+        }
+        
+        .glow {
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+        }
+        
+        .glow-text {
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+        
+        .card {
+            background: rgba(248, 249, 250, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(45deg, #00d4ff, #0099cc);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 212, 255, 0.4);
+        }
+        
+        .btn-secondary {
+            background: transparent;
+            border: 2px solid #00d4ff;
+            color: #00d4ff;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-secondary:hover {
+            background: #00d4ff;
+            color: #1a1a2e;
+        }
+        
+        .video-container {
+            position: relative;
+            border-radius: 20px;
+            overflow: hidden;
+            border: 2px solid rgba(0, 212, 255, 0.3);
+        }
+        
+        #video {
+            width: 100%;
+            height: auto;
+            transform: scaleX(-1); /* 镜像显示 */
+        }
+        
+        .canvas-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        
+        .action-icon {
+            width: 120px;
+            height: 120px;
+            filter: drop-shadow(0 0 10px rgba(0, 212, 255, 0.5));
+        }
+        
+        .score-popup {
+            position: absolute;
+            font-size: 2rem;
+            font-weight: bold;
+            pointer-events: none;
+            z-index: 1000;
+        }
+        
+        .perfect { color: #00ff88; }
+        .good { color: #ffaa00; }
+        .miss { color: #ff4757; }
+        
+        .skeleton-correct { stroke: #00ff88; }
+        .skeleton-incorrect { stroke: #ff4757; }
+        .skeleton-neutral { stroke: #00d4ff; }
+        
+        .floating-shapes {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: -1;
+        }
+        
+        .shape {
+            position: absolute;
+            opacity: 0.1;
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+        }
+        
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+        
+        .progress-ring-circle {
+            stroke-dasharray: 283;
+            stroke-dashoffset: 283;
+            transition: stroke-dashoffset 0.5s ease-in-out;
+        }
+        
+        .camera-status {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .camera-connected {
+            background: rgba(0, 255, 136, 0.2);
+            border: 1px solid #00ff88;
+            color: #00ff88;
+        }
+        
+        .camera-disconnected {
+            background: rgba(255, 71, 87, 0.2);
+            border: 1px solid #ff4757;
+            color: #ff4757;
+        }
+        
+        .camera-loading {
+            background: rgba(255, 170, 0, 0.2);
+            border: 1px solid #ffaa00;
+            color: #ffaa00;
+        }
+        
+        .skeleton-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .action-guide {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px 25px;
+            border-radius: 15px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+        
+        .calibration-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        
+        .calibration-step {
+            text-align: center;
+            max-width: 400px;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-white">
+    <!-- 浮动背景形状 -->
+    <div class="floating-shapes">
+        <div class="shape w-20 h-20 bg-cyan-500 rounded-full" style="top: 10%; left: 10%; animation-delay: 0s;"></div>
+        <div class="shape w-16 h-16 bg-blue-500 rounded-lg" style="top: 20%; right: 15%; animation-delay: 1s;"></div>
+        <div class="shape w-24 h-24 bg-purple-500 rounded-full" style="bottom: 30%; left: 20%; animation-delay: 2s;"></div>
+        <div class="shape w-12 h-12 bg-green-500 rounded-lg" style="bottom: 20%; right: 10%; animation-delay: 3s;"></div>
+    </div>
+
+    <!-- 主容器 -->
+    <div class="container mx-auto px-4 py-8">
+        <!-- 标题区域 -->
+        <header class="text-center mb-8">
+            <h1 class="text-5xl font-black glow-text mb-4">FitRhythm AI</h1>
+            <p class="text-xl text-gray-300">AI摄像头健身游戏 - 让运动更智能</p>
+        </header>
+
+        <!-- 游戏主界面 -->
+        <div id="gameInterface" class="max-w-7xl mx-auto">
+            <!-- 摄像头控制面板 -->
+            <div id="cameraPanel" class="card rounded-2xl p-6 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- 摄像头状态 -->
+                    <div class="space-y-4">
+                        <label class="block text-lg font-semibold">摄像头状态</label>
+                        <div id="cameraStatus" class="camera-status camera-disconnected">
+                            未连接
+                        </div>
+                        <button id="connectCameraBtn" class="w-full btn-primary text-white font-bold py-3 px-6 rounded-lg">
+                            连接摄像头
+                        </button>
+                        <button id="switchCameraBtn" class="w-full btn-secondary font-bold py-3 px-6 rounded-lg" disabled>
+                            切换摄像头
+                        </button>
+                    </div>
+
+                    <!-- 体重设置 -->
+                    <div class="space-y-4">
+                        <label class="block text-lg font-semibold">体重设置</label>
+                        <div class="flex items-center space-x-4">
+                            <span class="text-sm">40kg</span>
+                            <input type="range" id="weightSlider" min="40" max="120" value="60" 
+                                   class="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                            <span class="text-sm">120kg</span>
+                        </div>
+                        <div class="text-center">
+                            <span id="weightDisplay" class="text-2xl font-bold text-cyan-400">60</span>
+                            <span class="text-gray-400">kg</span>
+                        </div>
+                    </div>
+
+                    <!-- 训练模式 -->
+                    <div class="space-y-4">
+                        <label class="block text-lg font-semibold">训练模式</label>
+                        <div class="space-y-2">
+                            <label class="flex items-center space-x-3 cursor-pointer">
+                                <input type="radio" name="gameMode" value="modeA" checked 
+                                       class="w-4 h-4 text-cyan-400">
+                                <span>30s动作 + 30s休息 × 5轮</span>
+                            </label>
+                            <label class="flex items-center space-x-3 cursor-pointer">
+                                <input type="radio" name="gameMode" value="modeB" 
+                                       class="w-4 h-4 text-cyan-400">
+                                <span>45s动作 + 30s休息 × 4轮</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 游戏主区域 -->
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
+                <!-- 游戏状态 -->
+                <div class="lg:col-span-1 space-y-4">
+                    <div class="card rounded-2xl p-4">
+                        <!-- 倒计时 -->
+                        <div class="text-center mb-4">
+                            <div class="relative w-20 h-20 mx-auto mb-4">
+                                <svg class="progress-ring w-20 h-20">
+                                    <circle cx="40" cy="40" r="35" stroke="rgba(0, 212, 255, 0.2)" stroke-width="4" fill="none"/>
+                                    <circle id="progressCircle" cx="40" cy="40" r="35" stroke="#00d4ff" stroke-width="4" 
+                                            fill="none" class="progress-ring-circle"/>
+                                </svg>
+                                <div class="absolute inset-0 flex items-center justify-center">
+                                    <span id="countdownDisplay" class="text-xl font-bold">300</span>
+                                </div>
+                            </div>
+                            <p class="text-sm text-gray-400">剩余时间</p>
+                        </div>
+
+                        <!-- 当前轮次 -->
+                        <div class="text-center mb-4">
+                            <div class="text-2xl font-bold text-cyan-400 mb-2">
+                                <span id="currentRound">1</span>/<span id="totalRounds">5</span>
+                            </div>
+                            <p class="text-sm text-gray-400">当前轮次</p>
+                        </div>
+
+                        <!-- 当前状态 -->
+                        <div class="text-center">
+                            <div id="currentPhase" class="text-lg font-semibold text-green-400 mb-2">准备开始</div>
+                            <p class="text-sm text-gray-400">训练状态</p>
+                        </div>
+                    </div>
+
+                    <!-- 控制按钮 -->
+                    <div class="card rounded-2xl p-4">
+                        <div class="space-y-3">
+                            <button id="startBtn" class="w-full btn-primary text-white font-bold py-3 px-6 rounded-lg" disabled>
+                                开始训练
+                            </button>
+                            <button id="pauseBtn" class="w-full btn-secondary font-bold py-3 px-6 rounded-lg" disabled>
+                                暂停
+                            </button>
+                            <button id="endBtn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg" disabled>
+                                结束训练
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 视频和画布区域 -->
+                <div class="lg:col-span-2">
+                    <div class="card rounded-2xl p-4">
+                        <div class="video-container">
+                            <!-- 摄像头视频 -->
+                            <video id="video" autoplay muted playsinline></video>
+                            
+                            <!-- 骨架覆盖层 -->
+                            <canvas id="skeletonCanvas" class="skeleton-overlay"></canvas>
+                            
+                            <!-- 动作指导覆盖层 -->
+                            <div id="actionGuide" class="action-guide hidden">
+                                <div class="text-center">
+                                    <img id="currentActionIcon" src="squat-icon.png" alt="当前动作" 
+                                         class="w-16 h-16 mx-auto mb-2 opacity-0">
+                                    <h3 id="currentActionName" class="text-xl font-bold text-cyan-400 mb-2">深蹲</h3>
+                                    <p id="actionInstruction" class="text-sm text-gray-300">请站直身体，准备开始</p>
+                                    <div id="rhythmBar" class="mt-3 h-3 bg-gray-700 rounded-full opacity-0">
+                                        <div id="rhythmPointer" class="h-full w-2 bg-cyan-400 rounded-full transition-none"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 校准覆盖层 -->
+                            <div id="calibrationOverlay" class="calibration-overlay hidden">
+                                <div class="calibration-step">
+                                    <h2 class="text-2xl font-bold mb-4 text-cyan-400">摄像头校准</h2>
+                                    <p class="text-lg mb-6">请确保您的完整身体在摄像头范围内</p>
+                                    <div class="w-32 h-48 border-2 border-dashed border-cyan-400 rounded-lg mb-4 mx-auto flex items-center justify-center">
+                                        <span class="text-cyan-400">站在这里</span>
+                                    </div>
+                                    <button id="completeCalibrationBtn" class="btn-primary text-white font-bold py-3 px-8 rounded-lg">
+                                        完成校准
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- 摄像头状态指示器 -->
+                            <div id="cameraStatusIndicator" class="camera-status camera-disconnected">
+                                摄像头未连接
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 游戏数据 -->
+                <div class="lg:col-span-1 space-y-4">
+                    <div class="card rounded-2xl p-4">
+                        <!-- 分数 -->
+                        <div class="text-center mb-4">
+                            <div id="scoreDisplay" class="text-3xl font-bold text-yellow-400 mb-2">0</div>
+                            <p class="text-sm text-gray-400">总分</p>
+                        </div>
+
+                        <!-- 连击 -->
+                        <div class="text-center mb-4">
+                            <div class="text-xl font-bold text-purple-400 mb-2">
+                                <span id="comboCount">0</span>连击
+                            </div>
+                            <div class="text-sm text-gray-400">
+                                倍数: <span id="comboMultiplier" class="text-cyan-400">1.0x</span>
+                            </div>
+                        </div>
+
+                        <!-- 卡路里 -->
+                        <div class="text-center mb-4">
+                            <div id="caloriesDisplay" class="text-xl font-bold text-orange-400 mb-2">0</div>
+                            <p class="text-sm text-gray-400">卡路里</p>
+                        </div>
+
+                        <!-- 今日最高分 -->
+                        <div class="text-center">
+                            <div class="text-lg font-bold text-green-400 mb-2">
+                                <span id="todayHighScore">0</span>
+                            </div>
+                            <p class="text-sm text-gray-400">今日最高分</p>
+                        </div>
+                    </div>
+
+                    <!-- 动作准确度 -->
+                    <div class="card rounded-2xl p-4">
+                        <h4 class="text-lg font-semibold mb-3 text-center">动作准确度</h4>
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-sm">
+                                <span>深蹲</span>
+                                <span id="squatAccuracy" class="text-green-400">0%</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span>开合跳</span>
+                                <span id="jumpingJackAccuracy" class="text-green-400">0%</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span>弓步</span>
+                                <span id="lungeAccuracy" class="text-green-400">0%</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span>高抬腿</span>
+                                <span id="highKneesAccuracy" class="text-green-400">0%</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span>俯卧撑</span>
+                                <span id="pushUpAccuracy" class="text-green-400">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 动作说明 -->
+            <div class="card rounded-2xl p-6 mb-6">
+                <h3 class="text-xl font-bold mb-4 text-center">AI动作识别说明</h3>
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-blue-600 rounded-lg flex items-center justify-center mx-auto mb-2">
+                            <img src="squat-icon.png" alt="深蹲" class="w-10 h-10">
+                        </div>
+                        <p class="text-sm font-semibold">深蹲</p>
+                        <p class="text-xs text-gray-400">下蹲至大腿平行</p>
+                    </div>
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-green-600 rounded-lg flex items-center justify-center mx-auto mb-2">
+                            <img src="jumping-jack-icon.png" alt="开合跳" class="w-10 h-10">
+                        </div>
+                        <p class="text-sm font-semibold">开合跳</p>
+                        <p class="text-xs text-gray-400">手脚同时开合</p>
+                    </div>
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-purple-600 rounded-lg flex items-center justify-center mx-auto mb-2">
+                            <img src="lunge-icon.png" alt="弓步" class="w-10 h-10">
+                        </div>
+                        <p class="text-sm font-semibold">弓步</p>
+                        <p class="text-xs text-gray-400">前后腿交替弯曲</p>
+                    </div>
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-yellow-600 rounded-lg flex items-center justify-center mx-auto mb-2">
+                            <img src="high-knees-icon.png" alt="高抬腿" class="w-10 h-10">
+                        </div>
+                        <p class="text-sm font-semibold">高抬腿</p>
+                        <p class="text-xs text-gray-400">膝盖抬至腰部</p>
+                    </div>
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-red-600 rounded-lg flex items-center justify-center mx-auto mb-2">
+                            <img src="pushup-icon.png" alt="俯卧撑" class="w-10 h-10">
+                        </div>
+                        <p class="text-sm font-semibold">俯卧撑</p>
+                        <p class="text-xs text-gray-400">身体保持直线</p>
+                    </div>
+                </div>
+                <div class="mt-4 text-center">
+                    <p class="text-sm text-gray-400">
+                        <span class="text-green-400">绿色骨架</span> = 动作标准 | 
+                        <span class="text-red-400">红色骨架</span> = 需要调整 | 
+                        <span class="text-cyan-400">蓝色骨架</span> = 休息状态
+                    </p>
+                </div>
+            </div>
+
+            <!-- 排行榜 -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- 今日排行榜 -->
+                <div class="card rounded-2xl p-6">
+                    <h3 class="text-xl font-bold mb-4 text-center">今日排行榜</h3>
+                    <div id="todayLeaderboard" class="space-y-2">
+                        <!-- 动态生成排行榜内容 -->
+                    </div>
+                </div>
+
+                <!-- 历史排行榜 -->
+                <div class="card rounded-2xl p-6">
+                    <h3 class="text-xl font-bold mb-4 text-center">历史排行榜</h3>
+                    <div id="historyLeaderboard" class="space-y-2">
+                        <!-- 动态生成排行榜内容 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 游戏结束界面 -->
+        <div id="gameOverModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+            <div class="card rounded-2xl p-8 max-w-md w-full mx-4">
+                <div class="text-center">
+                    <h2 class="text-3xl font-bold mb-6 text-cyan-400">训练完成！</h2>
+                    
+                    <div class="space-y-4 mb-6">
+                        <div class="flex justify-between">
+                            <span>最终得分：</span>
+                            <span id="finalScore" class="font-bold text-yellow-400">0</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>最高连击：</span>
+                            <span id="maxCombo" class="font-bold text-purple-400">0</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>消耗卡路里：</span>
+                            <span id="totalCalories" class="font-bold text-orange-400">0</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>准确率：</span>
+                            <span id="accuracy" class="font-bold text-green-400">0%</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>动作评估：</span>
+                            <span id="actionEvaluation" class="font-bold text-cyan-400">优秀</span>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <button id="playAgainBtn" class="w-full btn-primary text-white font-bold py-3 px-6 rounded-lg">
+                            再来一次
+                        </button>
+                        <button id="viewRankBtn" class="w-full btn-secondary font-bold py-3 px-6 rounded-lg">
+                            查看排行
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 错误提示模态框 -->
+        <div id="errorModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+            <div class="card rounded-2xl p-8 max-w-md w-full mx-4">
+                <div class="text-center">
+                    <div class="text-6xl mb-4">⚠️</div>
+                    <h2 class="text-2xl font-bold mb-4 text-red-400">错误</h2>
+                    <p id="errorMessage" class="text-gray-300 mb-6">发生了一个错误</p>
+                    <button id="closeErrorBtn" class="btn-primary text-white font-bold py-3 px-8 rounded-lg">
+                        确定
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="camera-game-auto.js"></script>
+</body>
+</html>
