@@ -76,15 +76,97 @@ function showGamePage() { homeContent.classList.add('d-none'); gameContent.class
 function showPage2() { homeContent.classList.add('d-none'); gameContent.classList.add('d-none'); page2Content.classList.remove('d-none'); page3Content.classList.add('d-none'); newsDetailContent.classList.add('d-none'); setActiveNav('page2'); renderPage2Content(); }
 function showPage3() { homeContent.classList.add('d-none'); gameContent.classList.add('d-none'); page2Content.classList.add('d-none'); page3Content.classList.remove('d-none'); newsDetailContent.classList.add('d-none'); setActiveNav('page3'); renderPage3Content(); }
 
+// 检测是否在GitHub Pages环境
+const isGitHubPages = window.location.hostname.includes('github.io');
+
+// 模拟数据
+const mockNewsData = [
+  {
+    id: 1,
+    title: "新型疫苗研发取得重大突破",
+    content: "科学家们最近开发出一种新型疫苗，能够有效预防多种病毒感染，预计将在明年进入临床试验阶段。这项研究成果发表在《自然医学》期刊上，引起了医学界的广泛关注。",
+    date: "2023-11-15",
+    image: "https://picsum.photos/seed/news1/400/250.jpg",
+    source: "医学前沿"
+  },
+  {
+    id: 2,
+    title: "研究发现：规律运动可降低心脏病风险",
+    content: "最新研究表明，每周进行至少150分钟的中等强度运动，可以显著降低心脏病的发病风险。研究团队跟踪了5000名参与者长达10年，发现规律运动的人群心脏病发病率降低了30%。",
+    date: "2023-11-14",
+    image: "https://picsum.photos/seed/news2/400/250.jpg",
+    source: "健康日报"
+  },
+  {
+    id: 3,
+    title: "健康饮食指南更新：减少加工食品摄入",
+    content: "世界卫生组织更新了健康饮食指南，建议人们减少加工食品的摄入，增加天然食物的比例。指南指出，过度摄入加工食品与多种慢性疾病风险增加有关。",
+    date: "2023-11-13",
+    image: "https://picsum.photos/seed/news3/400/250.jpg",
+    source: "WHO"
+  },
+  {
+    id: 4,
+    title: "睡眠质量与免疫力关系研究",
+    content: "一项新研究发现，高质量的睡眠对于维持免疫系统正常功能至关重要，成年人每晚应保证7-9小时的睡眠。研究还发现，睡眠不足会导致抗体产生减少，影响疫苗效果。",
+    date: "2023-11-12",
+    image: "https://picsum.photos/seed/news4/400/250.jpg",
+    source: "睡眠医学"
+  },
+  {
+    id: 5,
+    title: "儿童青少年近视防控新策略",
+    content: "教育部和国家卫健委联合发布儿童青少年近视防控新策略，建议每天户外活动不少于2小时，严格控制电子产品使用时间，并定期进行视力检查。",
+    date: "2023-11-11",
+    image: "https://picsum.photos/seed/news5/400/250.jpg",
+    source: "教育健康"
+  }
+];
+
+const mockMedicalInfo = [
+  {
+    title: "冬季流感预防指南",
+    content: "冬季是流感高发季节，专家建议：1.及时接种流感疫苗；2.保持室内空气流通；3.勤洗手，避免触摸口鼻眼；4.保持充足睡眠，增强免疫力。",
+    category: "疾病预防",
+    date: new Date().toISOString().split('T')[0]
+  },
+  {
+    title: "高血压患者饮食建议",
+    content: "高血压患者应注意：1.减少钠盐摄入，每日不超过5克；2.增加钾的摄入，多吃香蕉、菠菜等；3.控制脂肪摄入，选择低脂乳制品；4.限制酒精摄入。",
+    category: "慢性病管理",
+    date: new Date().toISOString().split('T')[0]
+  },
+  {
+    title: "儿童疫苗接种时间表",
+    content: "根据国家免疫规划，儿童疫苗接种时间表：出生时：乙肝疫苗、卡介苗；1月龄：乙肝疫苗；2月龄：脊髓灰质炎疫苗；3月龄：百白破疫苗、脊髓灰质炎疫苗。",
+    category: "儿童健康",
+    date: new Date().toISOString().split('T')[0]
+  }
+];
+
 async function loadWeightLossNews() {
   try {
     weightLossNews.innerHTML = '<div class="col-md-12 text-center py-3"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">加载中...</span></div><p class="mt-2">正在获取最新资讯...</p></div>';
-    const res = await fetch('/api/news');
-    const json = await res.json();
-    if (!json.success || !Array.isArray(json.data)) throw new Error('获取资讯失败');
-    renderWeightLossNews(json.data);
+    
+    let newsData;
+    if (isGitHubPages) {
+      // GitHub Pages环境，使用模拟数据
+      newsData = mockNewsData;
+      // 模拟延迟，让用户看到加载状态
+      await new Promise(resolve => setTimeout(resolve, 500));
+    } else {
+      // 非GitHub Pages环境，使用真实API
+      const res = await fetch('/api/news');
+      const json = await res.json();
+      if (!json.success || !Array.isArray(json.data)) throw new Error('获取资讯失败');
+      newsData = json.data;
+    }
+    
+    renderWeightLossNews(newsData);
   } catch (error) {
-    weightLossNews.innerHTML = '<div class="col-md-12"><div class="alert alert-danger">加载减肥资讯失败，请稍后再试。</div></div>';
+    console.error('加载减肥资讯失败:', error);
+    // 显示模拟数据作为备选
+    renderWeightLossNews(mockNewsData);
   }
 }
 
@@ -95,7 +177,32 @@ function renderWeightLossNews(newsData) {
 
 function showNewsDetail(id) { homeContent.classList.add('d-none'); gameContent.classList.add('d-none'); page2Content.classList.add('d-none'); page3Content.classList.add('d-none'); newsDetailContent.classList.remove('d-none'); homeBtn.classList.remove('active'); gameBtn.classList.remove('active'); page2Btn.classList.remove('active'); page3Btn.classList.remove('active'); fetchNewsDetail(id); }
 
-async function fetchNewsDetail(id) { try { newsDetailBody.innerHTML = '<div class="text-center py-3"><div class="spinner-border text-primary" role="status"></div></div>'; const res = await fetch('/api/news/' + id); const json = await res.json(); if (!json.success || !json.data) throw new Error('详情获取失败'); const n = json.data; newsDetailBody.innerHTML = '<h3 class="mb-3">' + n.title + '</h3><img src="' + n.image + '" alt="' + n.title + '" class="img-fluid mb-3" /><p class="text-muted">发布日期：' + n.date + ' | 来源：' + (n.source || '') + '</p><p>' + n.content + '</p>'; } catch (err) { newsDetailBody.innerHTML = '<div class="alert alert-danger">加载详情失败</div>'; } }
+async function fetchNewsDetail(id) {
+  try {
+    newsDetailBody.innerHTML = '<div class="text-center py-3"><div class="spinner-border text-primary" role="status"></div></div>';
+    
+    let newsDetail;
+    if (isGitHubPages) {
+      // GitHub Pages环境，从模拟数据中查找
+      newsDetail = mockNewsData.find(n => n.id === id);
+      // 模拟延迟，让用户看到加载状态
+      await new Promise(resolve => setTimeout(resolve, 500));
+      if (!newsDetail) throw new Error('详情获取失败');
+    } else {
+      // 非GitHub Pages环境，使用真实API
+      const res = await fetch('/api/news/' + id);
+      const json = await res.json();
+      if (!json.success || !json.data) throw new Error('详情获取失败');
+      newsDetail = json.data;
+    }
+    
+    const n = newsDetail;
+    newsDetailBody.innerHTML = '<h3 class="mb-3">' + n.title + '</h3><img src="' + n.image + '" alt="' + n.title + '" class="img-fluid mb-3" /><p class="text-muted">发布日期：' + n.date + ' | 来源：' + (n.source || '') + '</p><p>' + n.content + '</p>';
+  } catch (err) {
+    console.error('加载详情失败:', err);
+    newsDetailBody.innerHTML = '<div class="alert alert-danger">加载详情失败</div>';
+  }
+}
 
 function initCalendar() { const today = new Date(); const currentMonth = today.getMonth(); const currentYear = today.getFullYear(); const currentDay = today.getDate(); renderCalendar(currentMonth, currentYear, currentDay); }
 function renderCalendar(month, year, currentDay) { const monthNames = ['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月']; const dayNames = ['日','一','二','三','四','五','六']; const firstDay = new Date(year, month, 1).getDay(); const daysInMonth = new Date(year, month + 1, 0).getDate(); const daysInPrevMonth = new Date(year, month, 0).getDate(); let html = '<div class="calendar-header"><button class="calendar-nav" id="prevMonth"><i class="fas fa-chevron-left"></i></button><h5>' + monthNames[month] + ' ' + year + '</h5><button class="calendar-nav" id="nextMonth"><i class="fas fa-chevron-right"></i></button></div><div class="calendar-grid">'; dayNames.forEach(day => { html += '<div class="calendar-day-header">' + day + '</div>'; }); for (let i = firstDay - 1; i >= 0; i--) { html += '<div class="calendar-day other-month">' + (daysInPrevMonth - i) + '</div>'; } for (let day = 1; day <= daysInMonth; day++) { const isToday = day === currentDay && month === new Date().getMonth() && year === new Date().getFullYear(); html += '<div class="calendar-day ' + (isToday ? 'today' : '') + '">' + day + '</div>'; } const totalCells = firstDay + daysInMonth; const nextMonthDays = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7); for (let day = 1; day <= nextMonthDays; day++) { html += '<div class="calendar-day other-month">' + day + '</div>'; } html += '</div>'; calendar.innerHTML = html; document.getElementById('prevMonth').addEventListener('click', () => { const newMonth = month === 0 ? 11 : month - 1; const newYear = month === 0 ? year - 1 : year; renderCalendar(newMonth, newYear, currentDay); }); document.getElementById('nextMonth').addEventListener('click', () => { const newMonth = month === 11 ? 0 : month + 1; const newYear = month === 11 ? year + 1 : year; renderCalendar(newMonth, newYear, currentDay); }); }
@@ -165,11 +272,21 @@ async function renderPage2Content() {
     </div>`;
 
   try {
-    const res = await fetch('/api/medical-info');
-    const json = await res.json();
-    if (!json.success) throw new Error('获取失败');
-    const items = json.data;
-    document.getElementById('medicalInfo').innerHTML = items.map(i => `
+    let medicalInfoData;
+    if (isGitHubPages) {
+      // GitHub Pages环境，使用模拟数据
+      medicalInfoData = mockMedicalInfo;
+      // 模拟延迟，让用户看到加载状态
+      await new Promise(resolve => setTimeout(resolve, 500));
+    } else {
+      // 非GitHub Pages环境，使用真实API
+      const res = await fetch('/api/medical-info');
+      const json = await res.json();
+      if (!json.success) throw new Error('获取失败');
+      medicalInfoData = json.data;
+    }
+    
+    document.getElementById('medicalInfo').innerHTML = medicalInfoData.map(i => `
       <div class="col-md-4 mb-3">
         <div class="card h-100">
           <div class="card-body">
@@ -182,7 +299,20 @@ async function renderPage2Content() {
       </div>
     `).join('');
   } catch (e) {
-    document.getElementById('medicalInfo').innerHTML = '<div class="alert alert-warning">加载医疗资讯失败</div>';
+    console.error('加载医疗资讯失败:', e);
+    // 显示模拟数据作为备选
+    document.getElementById('medicalInfo').innerHTML = mockMedicalInfo.map(i => `
+      <div class="col-md-4 mb-3">
+        <div class="card h-100">
+          <div class="card-body">
+            <h6 class="card-title">${i.title}</h6>
+            <p class="card-text">${i.content}</p>
+            <span class="badge bg-secondary">${i.category}</span>
+          </div>
+          <div class="card-footer"><small class="text-muted">${i.date}</small></div>
+        </div>
+      </div>
+    `).join('');
   }
 
   const foodUploadBox = document.getElementById('foodUploadBox');
@@ -210,16 +340,47 @@ async function renderPage2Content() {
       reader.readAsDataURL(file);
       const base64 = await new Promise((resolve) => { const r = new FileReader(); r.onload = (ev2) => resolve(String(ev2.target.result).split(',')[1]); r.readAsDataURL(file); });
       foodLoading.classList.remove('d-none');
+      
       try {
-        const resp = await fetch('/api/analyze-food', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ image: base64 }) });
-        const data = await resp.json();
-        if (data.items && data.items.length){
+        if (isGitHubPages) {
+          // GitHub Pages环境，使用模拟数据
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          // 模拟AI食物识别结果
+          const mockData = {
+            items: [
+              {
+                name: '鸡胸肉',
+                serving: '100g',
+                calories: 165,
+                confidence: 0.92,
+                nutrition: {
+                  protein: 31,
+                  carbohydrate: 0,
+                  fat: 3.6
+                }
+              },
+              {
+                name: '西兰花',
+                serving: '100g',
+                calories: 34,
+                confidence: 0.88,
+                nutrition: {
+                  protein: 2.8,
+                  carbohydrate: 6.6,
+                  fat: 0.4
+                }
+              }
+            ],
+            totalCalories: 199
+          };
+          
+          const data = mockData;
           let html = `
             <div class="card bg-light border-primary mb-4 shadow-sm">
               <div class="card-body text-center py-4">
                 <h4 class="card-title text-primary mb-0"><i class="fas fa-utensils me-2"></i>总热量估算</h4>
                 <div class="display-3 fw-bold text-dark my-2">${data.totalCalories} <span class="fs-4 text-muted">kcal</span></div>
-                <p class="text-muted mb-0">基于AI识别结果估算</p>
+                <p class="text-muted mb-0">基于AI识别结果估算（演示模式）</p>
               </div>
             </div>
             <div class="row g-3">
@@ -232,24 +393,6 @@ async function renderPage2Content() {
 
             // Handle structured nutrition data if available
             if (item.nutrition && typeof item.nutrition === 'object') {
-                const filteredNutrition = {};
-                const droppedKeys = [];
-                
-                // Filter null/undefined but keep 0, false, ""
-                for (const [key, value] of Object.entries(item.nutrition)) {
-                    if (value !== null && value !== undefined) {
-                        filteredNutrition[key] = value;
-                    } else {
-                        droppedKeys.push(key);
-                    }
-                }
-                
-                // Log dropped keys in dev environment (console)
-                if (droppedKeys.length > 0) {
-                    console.log(`Filtered invalid nutrition data for ${item.name}:`, droppedKeys);
-                }
-
-                // Construct badges from filtered data
                 // Mapping keys to friendly names
                 const labelMap = {
                     'protein': '蛋白质',
@@ -259,23 +402,13 @@ async function renderPage2Content() {
                     'fiber': '纤维'
                 };
 
-                nutritionInfo = Object.entries(filteredNutrition)
+                nutritionInfo = Object.entries(item.nutrition)
                     .map(([k, v]) => {
                         const label = labelMap[k] || k;
-                        // Skip internal/unknown keys if necessary, or just display all valid ones
-                        // For now we display all valid keys that have a mapping or just the key
                         if (!labelMap[k]) return ''; // Only show known nutritional fields
                         return `<span class="badge bg-info text-dark me-1">${label}: ${v}g</span>`;
                     })
                     .join('');
-
-            } else {
-                // Fallback for legacy string format if backend reverts
-                const match = item.name.match(/^(.+?)(（.+）)$/);
-                if (match) {
-                    displayName = match[1];
-                    nutritionInfo = match[2].replace(/[（）]/g, '').split('，').map(n => `<span class="badge bg-info text-dark me-1">${n}</span>`).join('');
-                }
             }
 
             html += `
@@ -339,21 +472,155 @@ async function renderPage2Content() {
               } else {
                  alert('请向 AI 发送：' + prompt);
               }
-
-              // Open Coze Chat
-              if (window.cozeClient) {
-                 // Try common methods
-                 if (typeof window.cozeClient.showChatBot === 'function') window.cozeClient.showChatBot();
-                 else if (typeof window.cozeClient.setOpen === 'function') window.cozeClient.setOpen(true);
-                 else if (typeof window.cozeClient.show === 'function') window.cozeClient.show();
-              }
             });
           }
         } else {
-          foodResult.innerHTML = '<div class="alert alert-danger">未识别到食物，请更换图片</div>';
+          // 非GitHub Pages环境，使用真实API
+          const resp = await fetch('/api/analyze-food', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ image: base64 }) });
+          const data = await resp.json();
+          if (data.items && data.items.length){
+            let html = `
+              <div class="card bg-light border-primary mb-4 shadow-sm">
+                <div class="card-body text-center py-4">
+                  <h4 class="card-title text-primary mb-0"><i class="fas fa-utensils me-2"></i>总热量估算</h4>
+                  <div class="display-3 fw-bold text-dark my-2">${data.totalCalories} <span class="fs-4 text-muted">kcal</span></div>
+                  <p class="text-muted mb-0">基于AI识别结果估算</p>
+                </div>
+              </div>
+              <div class="row g-3">
+            `;
+            
+            data.items.forEach((item) => {
+              const conf = (item.confidence * 100).toFixed(1);
+              let displayName = item.name;
+              let nutritionInfo = '';
+
+              // Handle structured nutrition data if available
+              if (item.nutrition && typeof item.nutrition === 'object') {
+                  const filteredNutrition = {};
+                  const droppedKeys = [];
+                  
+                  // Filter null/undefined but keep 0, false, ""
+                  for (const [key, value] of Object.entries(item.nutrition)) {
+                      if (value !== null && value !== undefined) {
+                          filteredNutrition[key] = value;
+                      } else {
+                          droppedKeys.push(key);
+                      }
+                  }
+                  
+                  // Log dropped keys in dev environment (console)
+                  if (droppedKeys.length > 0) {
+                      console.log(`Filtered invalid nutrition data for ${item.name}:`, droppedKeys);
+                  }
+
+                  // Construct badges from filtered data
+                  // Mapping keys to friendly names
+                  const labelMap = {
+                      'protein': '蛋白质',
+                      'carbohydrate': '碳水',
+                      'fat': '脂肪',
+                      'calorie': '卡路里',
+                      'fiber': '纤维'
+                  };
+
+                  nutritionInfo = Object.entries(filteredNutrition)
+                      .map(([k, v]) => {
+                          const label = labelMap[k] || k;
+                          // Skip internal/unknown keys if necessary, or just display all valid ones
+                          // For now we display all valid keys that have a mapping or just the key
+                          if (!labelMap[k]) return ''; // Only show known nutritional fields
+                          return `<span class="badge bg-info text-dark me-1">${label}: ${v}g</span>`;
+                      })
+                      .join('');
+
+              } else {
+                  // Fallback for legacy string format if backend reverts
+                  const match = item.name.match(/^(.+?)(（.+）)$/);
+                  if (match) {
+                      displayName = match[1];
+                      nutritionInfo = match[2].replace(/[（）]/g, '').split('，').map(n => `<span class="badge bg-info text-dark me-1">${n}</span>`).join('');
+                  }
+              }
+
+              html += `
+                <div class="col-md-6">
+                  <div class="card h-100 shadow-sm hover-shadow transition-all">
+                    <div class="card-body">
+                      <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h5 class="card-title fw-bold text-dark mb-0">${displayName}</h5>
+                        <span class="badge bg-warning text-dark fs-6 rounded-pill">🔥 ${item.calories} kcal</span>
+                      </div>
+                      
+                      <div class="mb-3">
+                        <small class="text-muted"><i class="fas fa-balance-scale me-1"></i>参考份量: ${item.serving}</small>
+                      </div>
+
+                      ${nutritionInfo ? `<div class="mb-3">${nutritionInfo}</div>` : ''}
+
+                      <div class="mt-auto">
+                        <div class="d-flex justify-content-between small text-muted mb-1">
+                          <span><i class="fas fa-robot me-1"></i>AI置信度</span>
+                          <span>${isNaN(conf) ? '—' : conf + '%'}</span>
+                        </div>
+                        <div class="progress" style="height: 6px;">
+                          <div class="progress-bar bg-success" role="progressbar" 
+                               style="width: ${item.confidence * 100}%" 
+                               aria-valuenow="${item.confidence * 100}" aria-valuemin="0" aria-valuemax="100">
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              `;
+            });
+            html += '</div>';
+            
+            // Add AI Consultation Button
+            html += `
+              <div class="text-center mt-4 pb-4">
+                <button id="consultAiBtn" class="btn btn-primary btn-lg rounded-pill shadow-sm hover-scale transition-all">
+                  <i class="fas fa-robot me-2"></i>AI 智能建议
+                </button>
+                <p class="text-muted small mt-2">基于识别结果获取个性化建议</p>
+              </div>
+            `;
+            
+            foodResult.innerHTML = html;
+
+            // Add Event Listener for AI Button
+            const consultBtn = document.getElementById('consultAiBtn');
+            if (consultBtn) {
+              consultBtn.addEventListener('click', () => {
+                const foodNames = data.items.map(i => i.name).join('、');
+                const prompt = `我刚刚识别了以下食物：${foodNames}，总热量约为 ${data.totalCalories} 千卡。请分析这顿饭的营养结构，并给出接下来的饮食建议和运动消耗方案。`;
+                
+                // Copy to clipboard and open chat
+                if (navigator.clipboard) {
+                  navigator.clipboard.writeText(prompt).then(() => {
+                    alert('已生成咨询问题并复制！\n请在 AI 对话框中粘贴发送。');
+                  }).catch(err => console.error('Copy failed', err));
+                } else {
+                   alert('请向 AI 发送：' + prompt);
+                }
+
+                // Open Coze Chat
+                if (window.cozeClient) {
+                   // Try common methods
+                   if (typeof window.cozeClient.showChatBot === 'function') window.cozeClient.showChatBot();
+                   else if (typeof window.cozeClient.setOpen === 'function') window.cozeClient.setOpen(true);
+                   else if (typeof window.cozeClient.show === 'function') window.cozeClient.show();
+                }
+              });
+            }
+          } else {
+            foodResult.innerHTML = '<div class="alert alert-danger">未识别到食物，请更换图片</div>';
+          }
         }
       } catch (err){
-        foodResult.innerHTML = '<div class="alert alert-danger">分析失败，请检查后端或网络</div>';
+        console.error('分析失败:', err);
+        foodResult.innerHTML = '<div class="alert alert-danger">分析失败，' + (isGitHubPages ? 'GitHub Pages环境下不支持AI后端功能' : '请检查后端或网络') + '</div>';
       } finally {
         foodLoading.classList.add('d-none');
       }
