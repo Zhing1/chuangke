@@ -20,10 +20,12 @@ async function getBaiduAccessToken() {
         });
         ACCESS_TOKEN = response.data.access_token || '';
         BAIDU_DEMO_MODE = !ACCESS_TOKEN;
-        setTimeout(getBaiduAccessToken, 86400000); // Refresh every 24 hours
+        // 存储定时器引用，用于测试环境清理
+        baiduTokenTimer = setTimeout(getBaiduAccessToken, 86400000); // Refresh every 24 hours
     } catch (error) {
         BAIDU_DEMO_MODE = true;
-        setTimeout(getBaiduAccessToken, 5000);
+        // 存储定时器引用，用于测试环境清理
+        baiduTokenTimer = setTimeout(getBaiduAccessToken, 5000);
     }
 }
 
@@ -668,6 +670,9 @@ app.post('/api/analyze-food', async (req, res) => {
         res.status(500).json({ error: 'AI分析失败，请重试！' });
     }
 });
+// 存储定时器引用，用于测试环境清理
+let baiduTokenTimer = null;
+
 // 启动服务器
 if (require.main === module) {
     getBaiduAccessToken().then(() => {
@@ -682,7 +687,19 @@ if (require.main === module) {
         });
     });
 } else {
-    // Vercel环境：异步初始化Baidu Token但不阻塞导出
-    getBaiduAccessToken().catch(() => { BAIDU_DEMO_MODE = true; });
+    // 测试环境：不自动初始化Baidu Token，避免Jest无法退出
+    // Vercel环境会在第一次请求时初始化
+    BAIDU_DEMO_MODE = true;
 }
-module.exports = app;
+
+// 导出清理函数，用于测试环境
+module.exports = {
+    app,
+    // 测试环境清理函数
+    cleanup: () => {
+        if (baiduTokenTimer) {
+            clearTimeout(baiduTokenTimer);
+            baiduTokenTimer = null;
+        }
+    }
+};

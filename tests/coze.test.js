@@ -3,10 +3,19 @@ const fs = require('fs');
 
 let server;
 let app;
+let serverModule;
 
 beforeAll(() => {
   // 获取Express应用实例，不启动服务器
-  app = require('../server/server');
+  serverModule = require('../server/server');
+  app = serverModule.app;
+});
+
+afterAll(() => {
+  // 清理定时器，确保Jest能正常退出
+  if (serverModule.cleanup) {
+    serverModule.cleanup();
+  }
 });
 
 // 跳过私钥检查测试，因为这可能是可选的
@@ -38,7 +47,8 @@ test('ux summary endpoint responds', async () => {
 // 如果需要启动服务器进行测试，可以使用以下方式：
 // let server;
 // beforeAll((done) => {
-//   app = require('../server/server');
+//   serverModule = require('../server/server');
+//   app = serverModule.app;
 //   server = app.listen(0, () => {
 //     global.testPort = server.address().port;
 //     done();
@@ -48,5 +58,8 @@ test('ux summary endpoint responds', async () => {
 // afterAll((done) => {
 //   if (server) {
 //     server.close(done);
+//   }
+//   if (serverModule.cleanup) {
+//     serverModule.cleanup();
 //   }
 // });
