@@ -581,18 +581,34 @@ app.post('/api/coze/token', async (req, res) => {
     try {
         const sessionName = (req.body && req.body.sessionName) ? String(req.body.sessionName) : 'web_' + stringRandom(8);
         const privateKeyPath = path.join(__dirname, '..', 'private_key.pem');
-        if (!fs.existsSync(privateKeyPath)) {
-            return res.status(500).json({ success:false, message:'private_key.pem not found at project root' });
+        let privateKey = '';
+        
+        if (process.env.COZE_PRIVATE_KEY) {
+            // 优先使用环境变量（适配Vercel等云环境）
+            privateKey = process.env.COZE_PRIVATE_KEY.replace(/\\n/g, '\n').trim();
+            // 自动补全PEM头尾（如果用户只粘贴了内容）
+            if (!privateKey.includes('-----BEGIN PRIVATE KEY-----')) {
+                privateKey = `-----BEGIN PRIVATE KEY-----\n${privateKey}\n-----END PRIVATE KEY-----`;
+            }
+        } else if (fs.existsSync(privateKeyPath)) {
+            // 本地开发环境读取文件
+            privateKey = fs.readFileSync(privateKeyPath, 'utf8');
+        } else {
+            console.error('Private key not found in env or file');
+            return res.status(500).json({ success:false, message:'Private key configuration missing' });
         }
-        const privateKey = fs.readFileSync(privateKeyPath, 'utf8');
+
         const aud = new URL(COZE_API_BASE).host;
         const token = await getJWTToken({ baseURL: COZE_API_BASE, appId: COZE_APP_ID, aud, keyid: COZE_KEY_ID, privateKey, sessionName });
         // Persist session state
-        const stateFile = path.join(DATA_DIR, 'sessions.json');
-        let state = {};
-        try { state = JSON.parse(fs.readFileSync(stateFile,'utf8')); } catch(e) {}
-        state[sessionName] = { last_issued_at: Date.now(), expires_in: token.expires_in };
-        try { fs.writeFileSync(stateFile, JSON.stringify(state, null, 2)); } catch(e) {}
+        // 在Vercel环境跳过文件写入
+        if (!process.env.VERCEL) {
+            const stateFile = path.join(DATA_DIR, 'sessions.json');
+            let state = {};
+            try { state = JSON.parse(fs.readFileSync(stateFile,'utf8')); } catch(e) {}
+            state[sessionName] = { last_issued_at: Date.now(), expires_in: token.expires_in };
+            try { fs.writeFileSync(stateFile, JSON.stringify(state, null, 2)); } catch(e) {}
+        }
         res.json({ token_type: token.token_type, access_token: token.access_token, expires_in: token.expires_in });
     } catch (e) {
         console.error('Issue Coze token failed:', e);
@@ -653,15 +669,20 @@ app.post('/api/analyze-food', async (req, res) => {
     }
 });
 // 启动服务器
-getBaiduAccessToken().then(() => {
-    app.listen(PORT, () => {
-        console.log(`服务器运行在 http://localhost:${PORT}`);
+if (require.main === module) {
+    getBaiduAccessToken().then(() => {
+        app.listen(PORT, () => {
+            console.log(`服务器运行在 http://localhost:${PORT}`);
+        });
+    }).catch(() => {
+        // 即使获取失败也启动服务并进入演示模式
+        BAIDU_DEMO_MODE = true;
+        app.listen(PORT, () => {
+            console.log(`服务器运行在 http://localhost:${PORT}（AI菜品识别演示模式）`);
+        });
     });
-}).catch(() => {
-    // 即使获取失败也启动服务并进入演示模式
-    BAIDU_DEMO_MODE = true;
-    app.listen(PORT, () => {
-        console.log(`服务器运行在 http://localhost:${PORT}（AI菜品识别演示模式）`);
-    });
-});
+} else {
+    // Vercel环境：异步初始化Baidu Token但不阻塞导出
+    getBaiduAccessToken().catch(() => { BAIDU_DEMO_MODE = true; });
+}
 module.exports = app;

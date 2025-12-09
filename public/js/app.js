@@ -311,7 +311,44 @@ async function renderPage2Content() {
             `;
           });
           html += '</div>';
+          
+          // Add AI Consultation Button
+          html += `
+            <div class="text-center mt-4 pb-4">
+              <button id="consultAiBtn" class="btn btn-primary btn-lg rounded-pill shadow-sm hover-scale transition-all">
+                <i class="fas fa-robot me-2"></i>AI 智能建议
+              </button>
+              <p class="text-muted small mt-2">基于识别结果获取个性化建议</p>
+            </div>
+          `;
+          
           foodResult.innerHTML = html;
+
+          // Add Event Listener for AI Button
+          const consultBtn = document.getElementById('consultAiBtn');
+          if (consultBtn) {
+            consultBtn.addEventListener('click', () => {
+              const foodNames = data.items.map(i => i.name).join('、');
+              const prompt = `我刚刚识别了以下食物：${foodNames}，总热量约为 ${data.totalCalories} 千卡。请分析这顿饭的营养结构，并给出接下来的饮食建议和运动消耗方案。`;
+              
+              // Copy to clipboard and open chat
+              if (navigator.clipboard) {
+                navigator.clipboard.writeText(prompt).then(() => {
+                  alert('已生成咨询问题并复制！\n请在 AI 对话框中粘贴发送。');
+                }).catch(err => console.error('Copy failed', err));
+              } else {
+                 alert('请向 AI 发送：' + prompt);
+              }
+
+              // Open Coze Chat
+              if (window.cozeClient) {
+                 // Try common methods
+                 if (typeof window.cozeClient.showChatBot === 'function') window.cozeClient.showChatBot();
+                 else if (typeof window.cozeClient.setOpen === 'function') window.cozeClient.setOpen(true);
+                 else if (typeof window.cozeClient.show === 'function') window.cozeClient.show();
+              }
+            });
+          }
         } else {
           foodResult.innerHTML = '<div class="alert alert-danger">未识别到食物，请更换图片</div>';
         }
